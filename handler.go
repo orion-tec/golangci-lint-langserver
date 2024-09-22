@@ -60,7 +60,7 @@ func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 	cmd := exec.Command(h.command[0], args...)
 	if strings.HasPrefix(path, h.rootDir) {
 		cmd.Dir = h.rootDir
-		file = path[len(h.rootDir)+1:]
+		file = path[len(h.rootDir):]
 	} else {
 		cmd.Dir = dir
 	}
