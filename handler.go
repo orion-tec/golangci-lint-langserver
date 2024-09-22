@@ -50,6 +50,7 @@ func (h *langHandler) errToDiagnostics(err error) []Diagnostic {
 func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 	diagnostics := make([]Diagnostic, 0)
 
+	h.logger.Printf(string(uri))
 	path := uriToPath(string(uri))
 	dir, file := filepath.Split(path)
 
@@ -60,11 +61,12 @@ func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 	cmd := exec.Command(h.command[0], args...)
 	if strings.HasPrefix(path, h.rootDir) {
 		cmd.Dir = h.rootDir
-		file = path[len(h.rootDir)+1:]
+		file = path[len(h.rootDir):]
 	} else {
 		cmd.Dir = dir
 	}
 	h.logger.DebugJSON("golangci-lint-langserver: golingci-lint cmd", cmd)
+	h.logger.Printf("golangci-lint-langserver: golingci-lint cmd", cmd)
 
 	b, err := cmd.Output()
 	if err == nil {
@@ -86,6 +88,7 @@ func (h *langHandler) lint(uri DocumentURI) ([]Diagnostic, error) {
 		issue := issue
 
 		if file != issue.Pos.Filename {
+			h.logger.Printf("=== golangci-lint-langserver: file mismatch: %s != %s", file, issue.Pos.Filename)
 			continue
 		}
 
@@ -134,8 +137,6 @@ func (h *langHandler) linter() {
 
 		diagnostics, err := h.lint(uri)
 		if err != nil {
-			h.logger.Printf("%s", err)
-
 			continue
 		}
 
@@ -146,7 +147,7 @@ func (h *langHandler) linter() {
 				URI:         uri,
 				Diagnostics: diagnostics,
 			}); err != nil {
-			h.logger.Printf("%s", err)
+			h.logger.Printf("================= %s", err)
 		}
 	}
 }
@@ -186,6 +187,10 @@ func (h *langHandler) handleInitialize(_ context.Context, conn *jsonrpc2.Conn, r
 	h.rootDir = uriToPath(params.RootURI)
 	h.conn = conn
 	h.command = params.InitializationOptions.Command
+
+	h.logger.Printf("=== golangci-lint-langserver: rootURI: %s", h.rootURI)
+	h.logger.Printf("=== golangci-lint-langserver: rootDIR: %s", h.rootDir)
+	h.logger.Printf("=== golangci-lint-langserver: command: %s", h.command)
 
 	return InitializeResult{
 		Capabilities: ServerCapabilities{
